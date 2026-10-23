@@ -1,0 +1,10 @@
+{
+  "name": "AI Usage",
+  "short_name": "AI Usage",
+  "display": "fullscreen",
+  "orientation": "landscape",
+  "background_color": "#070a10",
+  "theme_color": "#070a10",
+  "start_url": "/",
+  "icons": []
+}

@@ -1,0 +1,40 @@
+{
+  "title": "AI Usage",
+  "timezone": "America/Chicago",
+  "locale": "es-MX",
+  "refresh_seconds": 60,
+  "hermes_db": "~/.hermes/state.db",
+  "manual_file": "manual.json",
+  "live_read": true,
+  "providers": {
+    "opencode": {
+      "enabled": true,
+      "name": "OpenCode Go",
+      "plan": "Go",
+      "accent": "#a78bfa",
+      "mode": "live",
+      "note": "Cuota de Go por API (rolling 5 h, semanal, mensual)"
+    },
+    "chatgpt": {
+      "enabled": true,
+      "name": "ChatGPT Plus",
+      "plan": "Plus",
+      "accent": "#34d399",
+      "mode": "auto"
+    },
+    "claude": {
+      "enabled": true,
+      "name": "Claude Pro",
+      "plan": "Pro",
+      "accent": "#fb923c",
+      "mode": "auto"
+    },
+    "gemini": {
+      "enabled": false,
+      "name": "Gemini Pro",
+      "plan": "AI Pro",
+      "accent": "#60a5fa",
+      "mode": "auto"
+    }
+  }
+}

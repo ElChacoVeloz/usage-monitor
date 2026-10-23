@@ -1,0 +1,166 @@
+/* AI Usage Monitor — lienzo fijo 1920x1200 (16:10), tema oscuro.
+   Pensado para una Nexus 7 2013 (1920x1200, DPR 2): el lienzo se escala a
+   min(vw/1920, vh/1200), así en la tableta 1px de diseño = 1px físico. */
+:root{
+  --bg:#070a10;
+  --card:rgba(255,255,255,.035);
+  --card-line:rgba(255,255,255,.075);
+  --ink:#eef2f8;
+  --muted:rgba(226,232,240,.62);
+  --dim:rgba(226,232,240,.47);
+  --accent:#a78bfa;
+  --warn:#fbbf24;
+  --bad:#f87171;
+  --ok:#34d399;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);overflow:hidden}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Ubuntu,"Helvetica Neue",sans-serif;
+  color:var(--ink);
+  -webkit-font-smoothing:antialiased;
+  font-variant-numeric:tabular-nums;
+}
+html.booting *{transition:none !important}
+
+.glow{
+  position:fixed;top:0;right:0;bottom:0;left:0;pointer-events:none;
+  background:
+    radial-gradient(1100px 700px at 8% -10%, rgba(139,92,246,.18), transparent 62%),
+    radial-gradient(900px 600px at 100% 0%, rgba(52,211,153,.10), transparent 60%),
+    radial-gradient(1000px 800px at 50% 120%, rgba(96,165,250,.10), transparent 60%);
+}
+
+.stage{
+  position:absolute;top:0;left:0;
+  width:1920px;height:1200px;
+  padding:34px 40px 26px;
+  display:flex;flex-direction:column;
+  transform-origin:0 0;
+}
+
+/* --------------------------------------------------------------- encabezado */
+.top{display:flex;align-items:flex-start;justify-content:space-between;height:112px}
+.brand h1{
+  font-size:34px;font-weight:600;letter-spacing:.30em;text-transform:uppercase;
+  color:var(--ink);
+}
+.date{margin-top:10px;font-size:21px;color:var(--muted);letter-spacing:.02em}
+.clockbox{text-align:right}
+.clock{font-size:70px;font-weight:200;line-height:.92;letter-spacing:-.01em}
+.updated{margin-top:9px;font-size:17.5px;color:var(--dim);letter-spacing:.04em}
+
+/* -------------------------------------------------------------------- grid */
+.grid{
+  flex:1;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;
+  gap:22px;margin-top:14px;min-height:0;
+}
+/* una tarjeta por columna cuando quedan tres (o una sola fila con dos) */
+.grid[data-n="3"]{grid-template-columns:repeat(3,1fr);grid-template-rows:1fr}
+.grid[data-n="2"]{grid-template-columns:repeat(2,1fr);grid-template-rows:1fr}
+.grid[data-n="3"] .slots,
+.grid[data-n="2"] .slots{flex-direction:column;justify-content:space-evenly;padding:0}
+.grid[data-n="3"] .slot,
+.grid[data-n="2"] .slot{width:100%}
+.grid[data-n="3"] .card-foot{
+  flex-direction:column;align-items:flex-start;gap:5px;font-size:14px;
+}
+.grid[data-n="3"] .empty{padding:0 10px}
+.grid[data-n="3"] .empty .hint{max-width:100%}
+
+/* ------------------------------------------------------------------ tarjeta */
+.card{
+  position:relative;display:flex;flex-direction:column;
+  background:var(--card);border:1px solid var(--card-line);border-radius:26px;
+  padding:24px 30px 20px;min-height:0;overflow:hidden;
+}
+.card::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:5px;
+  background:var(--accent);opacity:.9;
+}
+.card::after{
+  content:"";position:absolute;left:-40px;top:-140px;width:320px;height:320px;
+  border-radius:50%;background:var(--accent);opacity:.10;filter:blur(6px);
+  pointer-events:none;
+}
+
+.card-head{display:flex;align-items:baseline;gap:14px;min-height:38px}
+.card-name{font-size:29px;font-weight:600;letter-spacing:.01em}
+.plan{
+  font-size:14.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--dim);
+  border:1px solid var(--card-line);border-radius:999px;padding:5px 12px;
+}
+.badge{
+  margin-left:auto;font-size:13.5px;font-weight:600;letter-spacing:.16em;
+  text-transform:uppercase;padding:6px 13px;border-radius:999px;
+  border:1px solid currentColor;color:var(--muted);white-space:nowrap;
+}
+.badge.live{color:var(--ok);background:rgba(52,211,153,.08)}
+.badge.measured{color:#93c5fd;background:rgba(96,165,250,.09)}
+.badge.manual{color:var(--warn);background:rgba(251,191,36,.09)}
+.badge.error{color:var(--bad);background:rgba(248,113,113,.10)}
+
+/* -------------------------------------------------------------------- slots */
+.slots{flex:1;display:flex;align-items:center;justify-content:space-between;padding:2px 6px 0}
+.slot{width:32%;display:flex;flex-direction:column;align-items:center;text-align:center}
+.slot-label{
+  font-size:14.5px;font-weight:600;letter-spacing:.20em;color:var(--dim);
+  text-transform:uppercase;margin-bottom:8px;
+}
+.gauge{position:relative;width:192px;height:192px}
+.gauge svg{width:192px;height:192px;transform:rotate(-90deg)}
+.gauge circle{fill:none;stroke-width:14;stroke-linecap:round}
+.gauge .track{stroke:rgba(255,255,255,.10)}
+.gauge .track-dash{stroke:rgba(255,255,255,.15);stroke-dasharray:3 9;stroke-linecap:butt}
+.gauge .arc{
+  stroke:var(--accent);stroke-dasharray:452.4;stroke-dashoffset:452.4;
+  transition:stroke-dashoffset .9s ease, stroke .4s ease;
+}
+.gauge .center{
+  /* offsets explícitos, NO `inset`: el WebView de la Nexus (Chromium 84-86) no
+     lo entiende y el bloque cae fuera del anillo, encima de la línea de abajo */
+  position:absolute;top:0;right:0;bottom:0;left:0;
+  display:flex;align-items:center;justify-content:center;
+}
+/* el numeral va centrado él mismo; el % se sale del flujo a su derecha */
+.gauge .val{position:relative;display:inline-block;line-height:1}
+.gauge .num{font-size:52px;font-weight:300;letter-spacing:-.02em;line-height:1;display:block}
+.gauge .unit{
+  position:absolute;left:100%;top:3px;margin-left:2px;
+  font-size:19px;font-weight:500;color:var(--muted);
+}
+.gauge.stat .num{font-size:37px;font-weight:300}
+
+.slot-line{margin-top:11px;font-size:16px;color:var(--muted);line-height:1.25}
+.slot-line.reset{color:var(--ink);font-weight:500}
+.slot-line.soon{color:var(--warn)}
+.slot-note{margin-top:5px;font-size:14.5px;color:rgba(226,232,240,.52);line-height:1.32}
+
+/* estado sin datos: no se pintan tres ceros, se dice qué falta */
+.empty{
+  flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;
+  gap:12px;text-align:center;padding:0 40px;
+}
+.empty .big{font-size:27px;font-weight:500;letter-spacing:.02em;color:var(--muted)}
+.empty .hint{font-size:15.5px;color:var(--dim);line-height:1.45;max-width:660px}
+.badge.empty{color:rgba(226,232,240,.58);background:rgba(255,255,255,.05)}
+
+.card-foot{
+  display:flex;align-items:baseline;justify-content:space-between;gap:14px;
+  border-top:1px solid rgba(255,255,255,.06);padding-top:12px;margin-top:8px;
+  font-size:15.2px;color:rgba(226,232,240,.54);
+}
+.card-foot b{color:var(--muted);font-weight:500}
+
+/* ------------------------------------------------------------------- footer */
+.bottom{
+  height:44px;display:flex;align-items:center;justify-content:space-between;
+  font-size:15.2px;color:var(--dim);letter-spacing:.03em;
+}
+.legend{display:flex;gap:18px}
+.legend i{font-style:normal;display:inline-flex;align-items:center;gap:7px}
+.legend i::before{content:"";width:9px;height:9px;border-radius:50%;background:currentColor}
+.legend .live{color:var(--ok)}
+.legend .measured{color:#93c5fd}
+.legend .manual{color:var(--warn)}
+.legend .error{color:var(--bad)}

@@ -1,0 +1,13 @@
+# Datos locales de la cuenta: nunca se publican
+manual.json
+
+# Capturas con uso real (en el repo va docs/demo.png, regenerado con --mock)
+screenshots/
+
+# Basura de Python
+__pycache__/
+*.pyc
+.venv/
+
+# Logs y temporales
+*.log
