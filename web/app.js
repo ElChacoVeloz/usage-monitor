@@ -15,18 +15,43 @@
   var state = { version: null, generated: 0, locale: 'es-MX', data: null };
 
   // ------------------------------------------------------------------ escala
+  // El ancho es fijo (tres columnas lo necesitan) y el ALTO se adapta a la
+  // pantalla: en 16:10 da 1200 (el diseño original) y en 4:3 (iPad) da 1440, así
+  // no quedan franjas negras arriba y abajo. El piso de 1200 evita comprimir el
+  // contenido en pantallas más anchas que 16:10.
   function fit() {
     var vw = window.innerWidth || document.documentElement.clientWidth;
     var vh = window.innerHeight || document.documentElement.clientHeight;
-    var s = Math.min(vw / DESIGN_W, vh / DESIGN_H);
+    if (!vw || !vh) return;
+    var stageH = Math.round(DESIGN_W * (vh / vw));
+    stageH = Math.max(DESIGN_H, Math.min(1700, stageH));
+    document.documentElement.style.setProperty('--stage-w', DESIGN_W + 'px');
+    document.documentElement.style.setProperty('--stage-h', stageH + 'px');
+    var s = Math.min(vw / DESIGN_W, vh / stageH);
     stage.style.transform =
       'translate(' + ((vw - DESIGN_W * s) / 2).toFixed(2) + 'px,' +
-      ((vh - DESIGN_H * s) / 2).toFixed(2) + 'px) scale(' + s.toFixed(4) + ')';
+      ((vh - stageH * s) / 2).toFixed(2) + 'px) scale(' + s.toFixed(4) + ')';
   }
   window.addEventListener('resize', fit);
   window.addEventListener('orientationchange', function () {
     setTimeout(fit, 220);
   });
+
+  // --------------------------------------------------------------- no dormirse
+  // En iPadOS 16.4+ el navegador puede pedir que no se apague la pantalla; en
+  // WebView/Android viejo el objeto no existe y no pasa nada. Se re-pide al
+  // volver a ser visible y en el primer toque (iOS a veces exige gesto).
+  function keepAwake() {
+    if (!navigator.wakeLock || !navigator.wakeLock.request) return;
+    try {
+      navigator.wakeLock.request('screen').catch(function () {});
+    } catch (e) {}
+  }
+  document.addEventListener('visibilitychange', function () {
+    if (!document.hidden) keepAwake();
+  });
+  document.addEventListener('pointerdown', keepAwake, { once: true });
+  keepAwake();
 
   // ------------------------------------------------------------------ relojes
   function pad(n) { return (n < 10 ? '0' : '') + n; }

@@ -1,8 +1,9 @@
 # AI Usage Monitor
 
 Tablero de cuotas de las suscripciones de modelos de IA, pensado para una **tablet
-vieja en kiosco** (referencia: Nexus 7 2013 con Android 6.0.1). Lienzo fijo
-**1920x1200** (16:10) escalado a la pantalla, tema oscuro, **sin dependencias y sin
+vieja en kiosco** (nació en una Nexus 7 2013 con Android 6; hoy corre en un iPad
+Mini). Lienzo de **1920 de ancho con alto adaptativo**: en 16:10 da 1920x1200 y en
+4:3 da 1920x1440, escalado a la pantalla. Tema oscuro, **sin dependencias y sin
 build**: Python estándar en el servidor y HTML/CSS/JS a mano en el cliente.
 
 ![Tablero con datos de ejemplo](docs/demo.png)
@@ -95,13 +96,24 @@ capturado a mano nunca se disfraza de vivo.
 
 ## Kiosco en la tablet
 
-- Pantalla **1920x1200** (16:10). El lienzo es exactamente ese tamaño: en la
-  tablet, 1 px de diseño = 1 px físico (escala 0.5 CSS con DPR 2).
-- **Que no se apague**: `Opciones de desarrollador → Permanecer despierto` (con el
-  cargador puesto) y `Pantalla → Suspender` al máximo; Android 6 no tiene "Nunca".
-  Además, Daydream desactivado y, si se usa Fully Kiosk, *Device Manager →
-  Keep Screen On* con *Screen Off Timer = 0*. El wake lock del navegador no es
-  confiable en WebView viejo.
+- **Geometría adaptativa**: el ancho es fijo (1920, lo piden las tres columnas) y el
+  **alto lo calcula el JS** con la proporción real de la pantalla
+  (`1920 * vh / vw`, entre 1200 y 1700). En 16:10 queda el diseño original de
+  1920x1200; en **4:3 (iPad) da 1920x1440** y el contenido se reparte sin franjas
+  negras. Verificado con emulación de dispositivo: en 1024x768, 1133x744, 1180x820 y
+  960x600 el lienzo llena ancho y alto, la rejilla cabe y ninguna tarjeta desborda.
+- **Que no se apague**: en iPadOS 16.4+ la página pide `navigator.wakeLock('screen')`
+  (se re-pide al volver a primer plano y en el primer toque). En Android 6 el wake
+  lock no existe y lo que manda es el sistema: `Opciones de desarrollador →
+  Permanecer despierto` con el cargador puesto y `Pantalla → Suspender` al máximo
+  (Android 6 no tiene "Nunca"). Además, Daydream desactivado y, si se usa Fully
+  Kiosk, *Device Manager → Keep Screen On* con *Screen Off Timer = 0*.
+- **iPad, en la práctica**: *Añadir a pantalla de inicio* (así corre sin barra del
+  navegador), *Ajustes → Pantalla y brillo → Bloqueo automático → Nunca*, y *Acceso
+  guiado* para que no se salga. El padding del lienzo respeta `env(safe-area-inset-*)`
+  para que el reloj no quede debajo de la barra de estado.
+- **Tamaños de iPad Mini**: los Mini 1–5 dan un viewport CSS de **1024x768** y los
+  Mini 6–7 de **1133x744**; ambos caben en el cálculo adaptativo sin tocar nada.
 - **Fully Kiosk Browser 1.49.1** es la última versión que soporta Android 6 (las
   actuales piden 7+). Alternativa sin instalar nada: *Fijar pantalla* de Android 6
   con Chrome.

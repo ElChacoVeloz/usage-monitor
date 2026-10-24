@@ -14,12 +14,13 @@
   --ok:#34d399;
 }
 *{box-sizing:border-box;margin:0;padding:0}
-html,body{height:100%;background:var(--bg);overflow:hidden}
+html,body{height:100%;background:var(--bg);overflow:hidden;}
 body{
   font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Ubuntu,"Helvetica Neue",sans-serif;
   color:var(--ink);
   -webkit-font-smoothing:antialiased;
   font-variant-numeric:tabular-nums;
+  overscroll-behavior:none;-webkit-tap-highlight-color:transparent;
 }
 html.booting *{transition:none !important}
 
@@ -33,10 +34,19 @@ html.booting *{transition:none !important}
 
 .stage{
   position:absolute;top:0;left:0;
-  width:1920px;height:1200px;
+  /* el alto lo fija el JS según la pantalla (16:10 tablet, 4:3 iPad, etc.) */
+  width:var(--stage-w,1920px);height:var(--stage-h,1200px);
   padding:34px 40px 26px;
   display:flex;flex-direction:column;
   transform-origin:0 0;
+}
+/* iPad en modo app (barra de estado translúcida): deja lugar arriba y abajo.
+   Si el motor no entiende env(), el @supports no aplica y queda el padding base. */
+@supports (padding: calc(34px + env(safe-area-inset-top, 0px))) {
+  .stage{
+    padding-top:calc(34px + env(safe-area-inset-top, 0px));
+    padding-bottom:calc(26px + env(safe-area-inset-bottom, 0px));
+  }
 }
 
 /* --------------------------------------------------------------- encabezado */
