@@ -102,16 +102,19 @@ capturado a mano nunca se disfraza de vivo.
   1920x1200; en **4:3 (iPad) da 1920x1440** y el contenido se reparte sin franjas
   negras. Verificado con emulación de dispositivo: en 1024x768, 1133x744, 1180x820 y
   960x600 el lienzo llena ancho y alto, la rejilla cabe y ninguna tarjeta desborda.
-- **Que no se apague**: en iPadOS 16.4+ la página pide `navigator.wakeLock('screen')`
-  (se re-pide al volver a primer plano y en el primer toque). En Android 6 el wake
-  lock no existe y lo que manda es el sistema: `Opciones de desarrollador →
-  Permanecer despierto` con el cargador puesto y `Pantalla → Suspender` al máximo
-  (Android 6 no tiene "Nunca"). Además, Daydream desactivado y, si se usa Fully
-  Kiosk, *Device Manager → Keep Screen On* con *Screen Off Timer = 0*.
+- **Que no se apague**: la página pide `navigator.wakeLock('screen')` cuando existe
+  (iPadOS 16.4+, re-pedido al volver a primer plano y en el primer toque) y lo
+  ignora en silencio cuando no. **En un iPad Mini 4 no existe**: su último sistema
+  es iPadOS 15.8.8, anterior al wake lock. Ahí manda iOS: *Ajustes → Pantalla y
+  brillo → Bloqueo automático → Nunca*, más *Acceso guiado* para que no se salga.
+  En Android 6 pasa lo mismo y lo que manda es el sistema: `Opciones de
+  desarrollador → Permanecer despierto` con el cargador puesto, `Pantalla →
+  Suspender` al máximo (Android 6 no tiene "Nunca"), Daydream desactivado y, si se
+  usa Fully Kiosk, *Device Manager → Keep Screen On* con *Screen Off Timer = 0*.
 - **iPad, en la práctica**: *Añadir a pantalla de inicio* (así corre sin barra del
-  navegador), *Ajustes → Pantalla y brillo → Bloqueo automático → Nunca*, y *Acceso
-  guiado* para que no se salga. El padding del lienzo respeta `env(safe-area-inset-*)`
-  para que el reloj no quede debajo de la barra de estado.
+  navegador), *Bloqueo automático → Nunca* y *Acceso guiado*. El padding del lienzo
+  respeta `env(safe-area-inset-*)` para que el reloj no quede debajo de la barra de
+  estado.
 - **Tamaños de iPad Mini**: los Mini 1–5 dan un viewport CSS de **1024x768** y los
   Mini 6–7 de **1133x744**; ambos caben en el cálculo adaptativo sin tocar nada.
 - **Fully Kiosk Browser 1.49.1** es la última versión que soporta Android 6 (las
