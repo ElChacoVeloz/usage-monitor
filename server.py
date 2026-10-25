@@ -571,13 +571,15 @@ def claude_access() -> str:
         return at
     if not rt:
         raise RuntimeError("token de Claude vencido y sin refresh_token")
-    body = urllib.parse.urlencode({
+    body = json.dumps({
         "grant_type": "refresh_token", "refresh_token": rt,
         "client_id": CLAUDE_CLIENT_ID,
     }).encode()
-    resp = http_json("https://console.anthropic.com/v1/oauth/token",
-                     headers={"Content-Type": "application/x-www-form-urlencoded",
-                              "Accept": "application/json"},
+    resp = http_json("https://platform.claude.com/v1/oauth/token",
+                     headers={"Content-Type": "application/json",
+                              "Accept": "application/json",
+                              "anthropic-beta": "oauth-2025-04-20",
+                              "User-Agent": "claude-cli/2.0.0 (external, cli)"},
                      body=body, method="POST", timeout=25)
     new_at = resp.get("access_token")
     if not new_at:
