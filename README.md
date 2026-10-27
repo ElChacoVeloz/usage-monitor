@@ -3,7 +3,7 @@
 Tablero de cuotas de las suscripciones de modelos de IA, pensado para una **tablet
 vieja en kiosco** (nació en una Nexus 7 2013 con Android 6; hoy corre en un iPad
 Mini). Lienzo de **1920 de ancho con alto adaptativo**: en 16:10 da 1920x1200 y en
-4:3 da 1920x1440, escalado a la pantalla. Tema oscuro, **sin dependencias y sin
+4:3 da 1920x1440, escalado a la pantalla. **Tema LCARS** (Star Trek), **sin dependencias y sin
 build**: Python estándar en el servidor y HTML/CSS/JS a mano en el cliente.
 
 ![Tablero con datos de ejemplo](docs/demo.png)
@@ -22,8 +22,9 @@ python3 -m unittest discover -s tests
 Una tarjeta por suscripción, con tres huecos cada una: **sesión / semana / mes**.
 Cada hueco es una de dos cosas, y se ve distinto a propósito:
 
-- **Gauge** (anillo con %): el proveedor **publica** esa cuota y la leemos.
-- **Número en anillo punteado**: el proveedor no publica cuota de ese periodo; se
+- **Barra segmentada con %** (escala 0–100): el proveedor **publica** esa cuota y
+  la leemos. Pasa a ámbar desde 70 % y a rojo (con parpadeo) desde 90 %.
+- **Número sobre barra punteada**: el proveedor no publica cuota de ese periodo; se
   muestra el **uso medido aquí** (tokens de entrada + salida) y el número de
   llamadas. Nunca un porcentaje inventado.
 
@@ -38,8 +39,12 @@ falla.
 | Claude Pro | 5 h y semana | **vivo**: `GET api.anthropic.com/api/oauth/usage` con el OAuth de `~/.claude/.credentials.json` |
 | ~~Gemini Pro~~ | — | **deshabilitado** (`enabled: false`): Google cerró el cliente OAuth de Code Assist para cuentas individuales (2026-10, pide migrar a Antigravity). El adaptador sigue en el código por si vuelve a existir una fuente |
 
-Con tres tarjetas el tablero va a **una columna por proveedor**, con los tres
-anillos apilados; el `grid` se adapta al número de tarjetas (`data-n`).
+Con tres proveedores el tablero va a **un panel LCARS por proveedor** (cian,
+durazno y salmón), con las tres ventanas apiladas. La barra lateral resume la
+ventana más corta de cada uno y los tokens del día; el pie, los totales medidos en
+Hermes (hoy / semana / mes) y cuántos proveedores están en vivo. Fuente Antonio
+incluida (`web/fonts/`, SIL OFL 1.1). El diseño anterior (anillos sobre fondo
+oscuro) está en el historial de git.
 
 ## Credenciales que usa
 
@@ -79,7 +84,7 @@ capturado a mano nunca se disfraza de vivo.
   Cloudflare (*error 1010, browser_signature_banned*) aparece si la petición viaja
   con el User-Agent de Python-urllib; por eso `OPENCODE_UA` va explícito.
 - **Si el API de cuota falla**, la tarjeta pasa a `MEDIDO`: muestra los tokens en
-  anillos punteados, con la causa en la nota. El cálculo por tokens × precio de
+  barras punteadas, con la causa en la nota. El cálculo por tokens × precio de
   lista se desfasa de lo que cobra el proveedor, así que nunca se pinta como cuota.
 - **Ventanas de Go**: el API manda `rolling`, `weekly` y `monthly` con `percent` y
   `resetsAt`. `rolling` es la ventana móvil de 5 h.
@@ -138,4 +143,6 @@ capturado a mano nunca se disfraza de vivo.
 
 ## Licencia
 
-MIT — ver [LICENSE](LICENSE).
+MIT — ver [LICENSE](LICENSE). La tipografía **Antonio** va bajo SIL Open Font
+License 1.1 (`web/fonts/OFL-Antonio.txt`). LCARS es un diseño de la franquicia
+Star Trek; esto es un homenaje de aficionado sin fines comerciales.
