@@ -145,15 +145,15 @@ html.booting *{transition:none !important;animation:none !important}
 }
 
 .win{position:relative}
-.w-label{display:flex;align-items:center;font-size:22px;letter-spacing:.1em;color:var(--lav)}
+.w-label{display:flex;align-items:center;font-size:21px;letter-spacing:.1em;color:var(--lav)}
 .w-label .tag{
   background:var(--lav);color:#000;padding:2px 12px 1px;margin-right:12px;font-weight:600;
   border-radius:15px 0 0 15px;letter-spacing:.06em;
 }
 .w-label .code{margin-left:auto;font-size:18px;color:var(--dim);letter-spacing:.08em}
-.w-main{display:flex;align-items:flex-end;margin-top:6px}
+.w-main{display:flex;align-items:flex-end;margin-top:2px}
 .w-num{
-  font-size:102px;font-weight:300;line-height:.84;color:var(--accent);
+  font-size:98px;font-weight:300;line-height:1;color:var(--accent);
   letter-spacing:-.01em;white-space:nowrap;min-width:150px;
 }
 .w-num .u{font-size:44px;font-weight:400;margin-left:4px;color:var(--muted)}
@@ -164,7 +164,7 @@ html.booting *{transition:none !important;animation:none !important}
 .w-note{margin-top:4px;font-size:19px;color:var(--muted);letter-spacing:.03em;line-height:1.2}
 
 .meter{
-  position:relative;height:28px;margin-top:10px;background:var(--track);
+  position:relative;height:26px;margin-top:16px;background:var(--track);
   border-radius:0 14px 14px 0;overflow:hidden;
 }
 .meter .fill{
