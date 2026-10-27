@@ -395,7 +395,7 @@ def source_opencode(cfg: dict, now: datetime, mock: bool,
                 "reset_at": q.get("reset_at"), "verb": verb,
                 "limit_text": "", "sub": sub,
             })
-        model = opencode_top_model(cfg)
+        model = "Example Model" if mock else opencode_top_model(cfg)
         note = "cuota Go leída del API"
         return {
             "id": pid, "name": pcfg["name"], "plan": pcfg["plan"],
@@ -912,15 +912,35 @@ def save_manual(cfg: dict, data: dict) -> None:
 
 # ------------------------------------------------------------------- payload
 
+def mock_measured() -> dict:
+    """Uso inventado para --mock (capturas del README): numeros redondos que
+    no salen de ninguna cuenta real."""
+    def b(t, c):
+        return {"tokens": t, "calls": c}
+    return {
+        "opencode": {"session": b(1_200_000, 240), "week": b(9_000_000, 1_500),
+                     "month": b(24_000_000, 3_600)},
+        "chatgpt": {"session": b(600_000, 90), "week": b(2_500_000, 400),
+                    "month": b(6_200_000, 950)},
+        "claude": {"session": b(300_000, 60), "week": b(1_000_000, 180),
+                   "month": b(3_100_000, 520)},
+        "gemini": {"session": b(0, 0), "week": b(0, 0), "month": b(0, 0)},
+    }
+
+
 def build_payload(cfg: dict, mock: bool = False) -> dict:
     global OFFLINE
     OFFLINE = CLI_OFFLINE or not cfg.get("live_read", True)
     now = datetime.now(tz_of(cfg))
-    try:
-        measured = measured_summary(cfg, now)
-    except Exception:
-        measured = {}
-    manual = load_manual(cfg)
+    if mock:
+        # Demo publica: nada sale de state.db ni de manual.json del dueno.
+        measured, manual = mock_measured(), {}
+    else:
+        try:
+            measured = measured_summary(cfg, now)
+        except Exception:
+            measured = {}
+        manual = load_manual(cfg)
 
     jobs = {
         "opencode": lambda: source_opencode(cfg, now, mock,

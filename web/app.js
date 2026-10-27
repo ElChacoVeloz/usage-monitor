@@ -297,7 +297,7 @@
     var provs = data.providers || [];
     var live = 0;
     provs.forEach(function (p) { if (p.source_mode === 'live') live++; });
-    var c1 = el('span', 'chip s-lav', 'thegrid2 · 8773'); chips.appendChild(c1);
+    var c1 = el('span', 'chip s-lav', 'puerto ' + (location.port || '80')); chips.appendChild(c1);
     var c2 = el('span', 'chip s-gry', provs.length + ' proveedores'); c2.style.color = '#c4c8d8';
     chips.appendChild(c2);
     var c3 = el('span', 'chip ' + (live === provs.length ? 's-cyn' : 'o'),
