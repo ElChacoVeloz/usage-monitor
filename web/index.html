@@ -2,39 +2,82 @@
 <html lang="es" class="booting">
 <head>
 <meta charset="utf-8">
-<title>AI Usage</title>
+<title>AI Usage · LCARS</title>
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<meta name="theme-color" content="#070a10">
+<meta name="theme-color" content="#000000">
 <meta name="format-detection" content="telephone=no">
 <link rel="manifest" href="/manifest.webmanifest">
-<link rel="stylesheet" href="/style.css?v=2">
+<link rel="stylesheet" href="/style.css?v=lcars1">
 </head>
 <body>
-<div class="glow"></div>
-
 <main class="stage" id="stage">
+
+  <!-- ============================== marco superior -->
   <header class="top">
-    <div class="brand">
-      <h1 id="title">AI USAGE</h1>
-      <div class="date" id="dateLine">&nbsp;</div>
-    </div>
-    <div class="clockbox">
-      <div class="clock" id="clock">--:--</div>
-      <div class="updated" id="updated">conectando…</div>
+    <div class="elbow e-top"><span class="elbow-code">AI · 8773</span></div>
+    <div class="top-body">
+      <div class="top-content">
+        <div class="brand">
+          <div class="chips" id="chips"></div>
+          <h1 id="title">AI USAGE</h1>
+          <div class="date" id="dateLine">&nbsp;</div>
+        </div>
+        <div class="clockbox">
+          <div class="clock" id="clock">--:--</div>
+          <div class="updated" id="updated">CONECTANDO…</div>
+        </div>
+      </div>
+      <div class="bar bar-bottom">
+        <i class="seg s-lav" style="width:180px"></i>
+        <i class="seg s-org" style="width:70px"></i>
+        <i class="seg s-gry fill"></i>
+        <i class="seg s-pch" style="width:120px"></i>
+        <i class="seg s-lav" style="width:44px"></i>
+        <i class="seg s-cap s-gry" style="width:60px"></i>
+      </div>
     </div>
   </header>
 
-  <section class="grid" id="grid"><!-- tarjetas --></section>
+  <!-- ============================== cuerpo -->
+  <section class="body">
+    <div class="row-top">
+      <div class="elbow e-mid"></div>
+      <div class="bar bar-top">
+        <i class="seg s-gry" style="width:260px"></i>
+        <i class="seg s-sal" style="width:46px"></i>
+        <i class="seg s-lav fill"></i>
+        <i class="seg s-cyn" style="width:90px"></i>
+        <i class="seg s-cap s-lav" style="width:60px"></i>
+      </div>
+    </div>
 
-  <footer class="bottom">
-    <div class="totals" id="totals">—</div>
-    <div class="legend" id="legend"></div>
-  </footer>
+    <div class="row-mid">
+      <nav class="side" id="side"></nav>
+      <div class="grid" id="grid"><!-- paneles --></div>
+    </div>
+
+    <div class="row-bot">
+      <div class="elbow e-bot"><span class="elbow-code" id="botCode">01-8773</span></div>
+      <div class="bot-body">
+        <div class="bot-content">
+          <div class="totals" id="totals">—</div>
+          <div class="legend" id="legend"></div>
+        </div>
+        <div class="bar bar-bottom">
+          <i class="seg s-pch" style="width:150px"></i>
+          <i class="seg s-gry fill"></i>
+          <i class="seg s-org" style="width:54px"></i>
+          <i class="seg s-lav" style="width:220px"></i>
+          <i class="seg s-cap s-gry" style="width:60px"></i>
+        </div>
+      </div>
+    </div>
+  </section>
 </main>
 
-<script src="/app.js?v=2"></script>
+<script src="/app.js?v=lcars1"></script>
 </body>
 </html>

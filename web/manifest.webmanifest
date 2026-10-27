@@ -3,8 +3,8 @@
   "short_name": "AI Usage",
   "display": "fullscreen",
   "orientation": "landscape",
-  "background_color": "#070a10",
-  "theme_color": "#070a10",
+  "background_color": "#000000",
+  "theme_color": "#000000",
   "start_url": "/",
   "icons": []
 }

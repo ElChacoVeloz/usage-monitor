@@ -1,24 +1,28 @@
-/* AI Usage Monitor — pintado del tablero. Sin librerías (Chromium 106 / Android 6). */
+/* AI Usage Monitor — tema LCARS (propuesta). Mismos datos que el tablero
+   original (/api/data); sin librerías, ES5 para WebView/iPad viejos. */
 (function () {
   'use strict';
 
   var DESIGN_W = 1920, DESIGN_H = 1200;
-  var CIRC = 2 * Math.PI * 72;      // r=72 en un viewBox de 176
   var stage = document.getElementById('stage');
   var grid = document.getElementById('grid');
+  var side = document.getElementById('side');
+  var chips = document.getElementById('chips');
   var clockEl = document.getElementById('clock');
   var dateEl = document.getElementById('dateLine');
   var updatedEl = document.getElementById('updated');
   var totalsEl = document.getElementById('totals');
   var legendEl = document.getElementById('legend');
+  var botCode = document.getElementById('botCode');
 
   var state = { version: null, generated: 0, locale: 'es-MX', data: null };
 
+  // Paleta LCARS por proveedor (el acento del config es violeta/verde/naranja;
+  // aquí se traduce a la paleta del panel). Desconocidos rotan por la lista.
+  var LCARS = { opencode: '#2ca9df', chatgpt: '#ffb98e', claude: '#ff8a66' };
+  var ROTA = ['#2ca9df', '#ffb98e', '#ff8a66', '#c4c8d8'];
+
   // ------------------------------------------------------------------ escala
-  // El ancho es fijo (tres columnas lo necesitan) y el ALTO se adapta a la
-  // pantalla: en 16:10 da 1200 (el diseño original) y en 4:3 (iPad) da 1440, así
-  // no quedan franjas negras arriba y abajo. El piso de 1200 evita comprimir el
-  // contenido en pantallas más anchas que 16:10.
   function fit() {
     var vw = window.innerWidth || document.documentElement.clientWidth;
     var vh = window.innerHeight || document.documentElement.clientHeight;
@@ -33,19 +37,12 @@
       ((vh - stageH * s) / 2).toFixed(2) + 'px) scale(' + s.toFixed(4) + ')';
   }
   window.addEventListener('resize', fit);
-  window.addEventListener('orientationchange', function () {
-    setTimeout(fit, 220);
-  });
+  window.addEventListener('orientationchange', function () { setTimeout(fit, 220); });
 
   // --------------------------------------------------------------- no dormirse
-  // En iPadOS 16.4+ el navegador puede pedir que no se apague la pantalla; en
-  // WebView/Android viejo el objeto no existe y no pasa nada. Se re-pide al
-  // volver a ser visible y en el primer toque (iOS a veces exige gesto).
   function keepAwake() {
     if (!navigator.wakeLock || !navigator.wakeLock.request) return;
-    try {
-      navigator.wakeLock.request('screen').catch(function () {});
-    } catch (e) {}
+    try { navigator.wakeLock.request('screen').catch(function () {}); } catch (e) {}
   }
   document.addEventListener('visibilitychange', function () {
     if (!document.hidden) keepAwake();
@@ -63,8 +60,7 @@
       try {
         var f = new Intl.DateTimeFormat(state.locale,
           { weekday: 'long', day: 'numeric', month: 'long' });
-        var txt = f.format(d);
-        dateEl.textContent = txt.charAt(0).toUpperCase() + txt.slice(1);
+        dateEl.textContent = f.format(d) + ' · ' + d.getFullYear();
       } catch (e) { /* sin Intl se queda la fecha del payload */ }
     }
   }
@@ -81,24 +77,23 @@
 
   function paintResets() {
     var now = Date.now() / 1000;
-    var nodes = document.querySelectorAll('.slot-line[data-reset]');
+    var nodes = document.querySelectorAll('.w-reset[data-reset]');
     for (var i = 0; i < nodes.length; i++) {
-      var el = nodes[i];
-      var at = parseFloat(el.getAttribute('data-reset'));
+      var n = nodes[i];
+      var at = parseFloat(n.getAttribute('data-reset'));
       if (!at) continue;
       var left = at - now;
+      var noun = n.getAttribute('data-noun') || 'reinicia';
       if (left <= 0) {
-        el.textContent = (el.getAttribute('data-noun') || 'reinicia') + ' ya';
-        el.classList.remove('soon');
+        n.textContent = noun + ' ya';
+        n.classList.remove('soon');
       } else {
-        el.textContent = (el.getAttribute('data-noun') || 'reinicia') +
-          ' en ' + humanGap(left);
-        if (left < 1800) el.classList.add('soon'); else el.classList.remove('soon');
+        n.textContent = noun + ' en ' + humanGap(left);
+        if (left < 1800) n.classList.add('soon'); else n.classList.remove('soon');
       }
     }
     if (state.generated) {
-      var age = now - state.generated;
-      updatedEl.textContent = 'datos de hace ' + humanGap(age).replace(' ', ' ');
+      updatedEl.textContent = 'datos de hace ' + humanGap(now - state.generated);
     }
   }
 
@@ -111,127 +106,203 @@
   }
 
   function level(pct) {
-    if (pct >= 90) return 'var(--bad)';
-    if (pct >= 70) return 'var(--warn)';
+    if (pct >= 90) return 'var(--org)';
+    if (pct >= 70) return 'var(--amb)';
     return 'var(--accent)';
   }
 
-  // ------------------------------------------------------------------ tarjetas
-  function gaugeSvg(stat) {
-    var NS = 'http://www.w3.org/2000/svg';
-    var svg = document.createElementNS(NS, 'svg');
-    svg.setAttribute('viewBox', '0 0 176 176');
-    var track = document.createElementNS(NS, 'circle');
-    track.setAttribute('class', stat ? 'track track-dash' : 'track');
-    track.setAttribute('cx', '88'); track.setAttribute('cy', '88');
-    track.setAttribute('r', '72');
-    svg.appendChild(track);
-    if (!stat) {
-      var arc = document.createElementNS(NS, 'circle');
-      arc.setAttribute('class', 'arc');
-      arc.setAttribute('cx', '88'); arc.setAttribute('cy', '88');
-      arc.setAttribute('r', '72');
-      svg.appendChild(arc);
-      svg._arc = arc;
-    }
-    return svg;
+  // códigos de panel: salen de los datos (posición y %), no son decoración al azar
+  function code(i, j, v) {
+    return pad(i + 1) + '-' + pad(j + 1) + (v != null ? ' · ' + v : '');
   }
 
-  function slotNode(w) {
-    var slot = el('div', 'slot');
-    slot.appendChild(el('div', 'slot-label', w.label));
+  // ------------------------------------------------------------------ ventana
+  function winNode(w, i, j) {
+    var quota = w.kind === 'quota';
+    var pct = Math.max(0, w.pct || 0);
+    var box = el('div', 'win' + (quota ? '' : ' stat') + (quota && pct >= 90 ? ' bad' : ''));
 
-    var gauge = el('div', 'gauge' + (w.kind === 'quota' ? '' : ' stat'));
-    var svg = gaugeSvg(w.kind !== 'quota');
-    gauge.appendChild(svg);
-    var center = el('div', 'center');
+    var lab = el('div', 'w-label');
+    lab.appendChild(el('span', 'tag', w.label || '—'));
+    lab.appendChild(el('span', null, quota ? 'cuota' : 'medido'));
+    lab.appendChild(el('span', 'code', code(i, j, quota ? Math.round(pct * 10) : w.calls || 0)));
+    box.appendChild(lab);
 
-    if (w.kind === 'quota') {
-      var pct = Math.max(0, Math.round(w.pct || 0));
-      // el % cuelga fuera del flujo: así el numeral queda centrado de verdad
-      var val = el('span', 'val');
-      val.appendChild(el('span', 'num', String(pct)));
-      val.appendChild(el('span', 'unit', '%'));
-      center.appendChild(val);
-      gauge.appendChild(center);
-      slot.appendChild(gauge);
+    var main = el('div', 'w-main');
+    var num = el('div', 'w-num');
+    var sideTxt = el('div', 'w-side');
 
-      var arc = svg._arc;
-      var frac = Math.min(100, Math.max(0, w.pct || 0)) / 100;
-      // va por style, no por atributo: la regla .gauge .arc del CSS gana al atributo
-      arc.style.strokeDashoffset = String(CIRC * (1 - frac));
-      arc.style.stroke = level(w.pct || 0);
-      // con 0% el remate redondo del trazo deja un punto verde que parece un bug
-      arc.style.opacity = frac > 0.002 ? '1' : '0';
-      var line = el('div', 'slot-line reset');
+    if (quota) {
+      num.appendChild(document.createTextNode(String(Math.round(pct))));
+      num.appendChild(el('span', 'u', '%'));
+      num.style.color = level(pct);
+      var r = el('div', 'w-reset');
       if (w.reset_at) {
-        line.setAttribute('data-reset', String(w.reset_at));
-        line.setAttribute('data-noun', w.verb || 'reinicia');
-        line.textContent = (w.verb || 'reinicia') + ' en …';
+        r.setAttribute('data-reset', String(w.reset_at));
+        r.setAttribute('data-noun', w.verb || 'reinicia');
+        r.textContent = (w.verb || 'reinicia') + ' en …';
       } else {
-        line.textContent = (w.pct || 0) < 0.05
-          ? 'sin uso en esta ventana' : 'sin hora de reinicio';
-        line.classList.remove('reset');
+        r.textContent = pct < 0.05 ? 'sin uso en esta ventana' : 'sin hora de reinicio';
       }
-      slot.appendChild(line);
-      if (w.limit_text) slot.appendChild(el('div', 'slot-note', w.limit_text));
-      if (w.sub) slot.appendChild(el('div', 'slot-note', w.sub));
+      sideTxt.appendChild(r);
+      if (w.limit_text) sideTxt.appendChild(el('div', 'w-note', w.limit_text));
+      if (w.sub) sideTxt.appendChild(el('div', 'w-note', w.sub));
     } else {
-      center.appendChild(el('span', 'num', w.tokens_text || '0'));
-      gauge.appendChild(center);
-      slot.appendChild(gauge);
-      slot.appendChild(el('div', 'slot-line',
+      num.textContent = w.tokens_text || '0';
+      sideTxt.appendChild(el('div', 'w-reset',
         (w.calls || 0) + ' llamada' + (w.calls === 1 ? '' : 's')));
-      slot.appendChild(el('div', 'slot-note', 'tokens entrada + salida'));
+      sideTxt.appendChild(el('div', 'w-note', 'tokens entrada + salida'));
+      if (w.sub) sideTxt.appendChild(el('div', 'w-note', w.sub));
     }
-    return slot;
+    main.appendChild(num);
+    main.appendChild(sideTxt);
+    box.appendChild(main);
+
+    var meter = el('div', 'meter' + (quota ? '' : ' dash'));
+    if (quota) {
+      var f = el('div', 'fill');
+      f.style.width = Math.min(100, pct).toFixed(1) + '%';
+      f.style.background = level(pct);
+      // con 0% no se pinta nada: un segmento suelto parecería consumo
+      if (pct < 0.05) f.style.width = '0';
+      meter.appendChild(f);
+    }
+    box.appendChild(meter);
+    if (quota) {
+      var t = el('div', 'ticks');
+      ['0', '25', '50', '75', '100'].forEach(function (x) { t.appendChild(el('span', null, x)); });
+      box.appendChild(t);
+    }
+    return box;
   }
 
-  function cardNode(p) {
-    var card = el('article', 'card');
-    card.style.setProperty('--accent', p.accent || '#a78bfa');
+  // ------------------------------------------------------------------- panel
+  function panelNode(p, i) {
+    var panel = el('article', 'panel');
+    var acc = LCARS[p.id] || ROTA[i % ROTA.length];
+    panel.style.setProperty('--accent', acc);
 
-    var head = el('div', 'card-head');
-    head.appendChild(el('div', 'card-name', p.name || '—'));
-    if (p.plan) head.appendChild(el('span', 'plan', p.plan));
-    var badge = el('span', 'badge ' + (p.source_mode || 'measured'), p.source_label || '');
-    head.appendChild(badge);
-    card.appendChild(head);
+    var head = el('div', 'p-head');
+    head.appendChild(el('span', 'p-cap'));
+    head.appendChild(el('span', 'p-name', p.name || '—'));
+    if (p.plan) head.appendChild(el('span', 'p-plan', p.plan));
+    head.appendChild(el('span', 'p-fill'));
+    head.appendChild(el('span', 'p-badge ' + (p.source_mode || 'measured'), p.source_label || ''));
+    head.appendChild(el('span', 'p-end'));
+    panel.appendChild(head);
 
-    var slots = el('div', 'slots');
-    (p.windows || []).forEach(function (w) { slots.appendChild(slotNode(w)); });
-    if (!p.windows || !p.windows.length) {
+    var body = el('div', 'p-body');
+    var ws = p.windows || [];
+    if (!ws.length) {
       var box = el('div', 'empty');
-      box.appendChild(el('div', 'big', 'Sin datos todavía'));
+      box.appendChild(el('div', 'big', p.source_label || 'Sin datos todavía'));
       box.appendChild(el('div', 'hint', p.hint || p.source_note || ''));
-      card.appendChild(box);
+      body.appendChild(box);
     } else {
-      card.appendChild(slots);
+      ws.forEach(function (w, j) { body.appendChild(winNode(w, i, j)); });
     }
+    panel.appendChild(body);
 
-    var foot = el('div', 'card-foot');
-    var left = el('div');
-    if (p.footer && p.footer.model) {
-      left.appendChild(el('b', null, p.footer.model));
-    }
-    foot.appendChild(left);
-    foot.appendChild(el('div', null, (p.source_note || (p.footer && p.footer.note) || '')));
-    card.appendChild(foot);
-    return card;
+    var foot = el('div', 'p-foot');
+    foot.appendChild(el('span', 'fc'));
+    var model = p.footer && p.footer.model;
+    foot.appendChild(el('span', 'fm', model || ('nodo ' + pad(i + 1))));
+    foot.appendChild(el('span', 'ff'));
+    foot.appendChild(el('span', 'fn', p.source_note || (p.footer && p.footer.note) || ''));
+    panel.appendChild(foot);
+    return panel;
   }
 
-  function renderLegend(providers) {
-    var seen = {}, items = [
-      { k: 'live', t: 'en vivo' }, { k: 'measured', t: 'medido aquí' },
-      { k: 'manual', t: 'manual' }, { k: 'error', t: 'sin lectura' }
+  // ----------------------------------------------------------- barra lateral
+  function blk(cls, k, v, h) {
+    var b = el('div', 'blk ' + cls);
+    if (h) b.style.height = h + 'px';
+    if (k) b.appendChild(el('span', 'k', k));
+    if (v != null) b.appendChild(el('span', 'v', v));
+    return b;
+  }
+
+  function numBlk(color, big, small) {
+    var b = el('div', 'num');
+    var tab = el('span', 'tab'); tab.style.background = color;
+    b.appendChild(tab);
+    var n = el('div', 'n');
+    n.appendChild(el('b', null, big));
+    n.appendChild(el('span', null, small));
+    b.appendChild(n);
+    return b;
+  }
+
+  function renderSide(data) {
+    side.innerHTML = '';
+    var provs = data.providers || [];
+    var t = data.totals || {};
+    side.appendChild(blk('s-org', 'consumo', 'AI', 74));
+    // un dato grande por proveedor: la ventana más corta con cuota
+    provs.forEach(function (p, i) {
+      var w = null;
+      (p.windows || []).forEach(function (x) { if (!w && x.kind === 'quota') w = x; });
+      var acc = LCARS[p.id] || ROTA[i % ROTA.length];
+      if (w) {
+        side.appendChild(numBlk(acc, Math.round(w.pct || 0) + '%',
+          (p.id || '').toUpperCase() + ' · ' + (w.label || '')));
+      } else {
+        side.appendChild(numBlk(acc, '—', (p.id || '').toUpperCase() + ' · ' + (p.source_label || '')));
+      }
+    });
+    side.appendChild(blk('s-lav', 'hoy · tokens', (t.today || {}).tokens_text || '0', 84));
+    side.appendChild(blk('s-gry', 'llamadas hoy', String((t.today || {}).calls || 0), 84));
+    side.appendChild(blk('s-pch', 'semana', (t.week || {}).tokens_text || '0', 84));
+    side.appendChild(blk('s-lav fill', 'rev', (data.version || '').slice(0, 6)));
+  }
+
+  // ------------------------------------------------------------- pie / leyenda
+  function renderBottom(data) {
+    var t = data.totals || {};
+    totalsEl.innerHTML = '';
+    totalsEl.appendChild(el('div', 'lbl', 'medido en hermes'));
+    [['hoy', t.today], ['semana', t.week], ['mes', t.month]].forEach(function (x) {
+      var c = el('div', 't');
+      var o = x[1] || {};
+      c.appendChild(el('span', null, x[0]));
+      c.appendChild(el('b', null, o.tokens_text || '0'));
+      c.appendChild(el('i', null, (o.calls || 0) + ' llamadas'));
+      totalsEl.appendChild(c);
+    });
+
+    var items = [
+      { k: 'live', t: 'en vivo' }, { k: 'measured', t: 'medido' },
+      { k: 'manual', t: 'manual' }, { k: 'error', t: 'sin lectura' },
+      { k: 'empty', t: 'sin datos' }
     ];
-    providers.forEach(function (p) { seen[p.source_mode] = true; });
+    var count = {};
+    (data.providers || []).forEach(function (p) {
+      count[p.source_mode] = (count[p.source_mode] || 0) + 1;
+    });
     legendEl.innerHTML = '';
     items.forEach(function (it) {
-      if (!seen[it.k]) return;
-      var i = el('i', it.k, it.t);
-      legendEl.appendChild(i);
+      if (!count[it.k]) return;
+      var b = el('div', 'lg ' + (it.k === 'empty' ? 'measured' : it.k));
+      b.appendChild(el('b', null, it.t));
+      var s = el('span');
+      s.appendChild(el('em', null, count[it.k] + ' / ' + (data.providers || []).length));
+      b.appendChild(s);
+      legendEl.appendChild(b);
     });
+    botCode.textContent = 'ref ' + (data.version || '').slice(0, 8);
+  }
+
+  function renderChips(data) {
+    chips.innerHTML = '';
+    var provs = data.providers || [];
+    var live = 0;
+    provs.forEach(function (p) { if (p.source_mode === 'live') live++; });
+    var c1 = el('span', 'chip s-lav', 'thegrid2 · 8773'); chips.appendChild(c1);
+    var c2 = el('span', 'chip s-gry', provs.length + ' proveedores'); c2.style.color = '#c4c8d8';
+    chips.appendChild(c2);
+    var c3 = el('span', 'chip ' + (live === provs.length ? 's-cyn' : 'o'),
+      live + ' en vivo');
+    chips.appendChild(c3);
   }
 
   function render(data) {
@@ -240,22 +311,13 @@
     state.generated = data.generated_at || 0;
     state.locale = data.locale || 'es-MX';
     if (data.title) document.getElementById('title').textContent = data.title;
-    if (data.now && data.now.date) {
-      dateEl.textContent = data.now.date;
-    }
+    if (data.now && data.now.date) dateEl.textContent = data.now.date;
 
     grid.innerHTML = '';
-    var provs = data.providers || [];
-    grid.setAttribute('data-n', String(provs.length));
-    provs.forEach(function (p) { grid.appendChild(cardNode(p)); });
-
-    var t = data.totals || {};
-    totalsEl.textContent =
-      'MEDIDO EN HERMES · HOY ' + ((t.today || {}).tokens_text || '0') +
-      ' tok · SEMANA ' + ((t.week || {}).tokens_text || '0') +
-      ' · MES ' + ((t.month || {}).tokens_text || '0');
-
-    renderLegend(data.providers || []);
+    (data.providers || []).forEach(function (p, i) { grid.appendChild(panelNode(p, i)); });
+    renderSide(data);
+    renderBottom(data);
+    renderChips(data);
     paintClock();
     paintResets();
     document.documentElement.classList.remove('booting');
@@ -283,6 +345,8 @@
     };
     req.send();
   }
+
+  window.lcarsDebug = { render: render, state: state };
 
   fit();
   paintClock();
