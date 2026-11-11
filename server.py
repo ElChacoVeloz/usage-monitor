@@ -291,20 +291,28 @@ def provider_of(row: dict) -> str:
 
 
 def measured_summary(cfg: dict, now: datetime) -> dict:
-    """Tokens (entrada+salida) y llamadas por proveedor y periodo."""
+    """Tokens (entrada+salida), llamadas y USD estimado por proveedor y periodo.
+
+    El "usd" es una estimación con la tabla de precios Go de este archivo
+    (`row_cost`): sirve para ver movimiento cuando la cuota del API viene en 0,
+    no para cuadrar la factura.
+    """
     rows = usage_rows(cfg)
     starts = period_starts(now)
-    out = {pid: {k: {"tokens": 0, "calls": 0} for k in starts} for pid in
+    out = {pid: {k: {"tokens": 0, "calls": 0, "usd": 0.0} for k in starts} for pid in
            ("opencode", "chatgpt", "claude", "gemini", "otros")}
     for row in rows:
         pid = provider_of(row)
         last = float(row["last_seen"] or 0)
         tok = int(row["input_tokens"] or 0) + int(row["output_tokens"] or 0)
         calls = int(row["api_call_count"] or 0)
+        usd, precio_conocido = row_cost(row, "peak")
         for key, start in starts.items():
             if last >= start:
                 out[pid][key]["tokens"] += tok
                 out[pid][key]["calls"] += calls
+                if precio_conocido:
+                    out[pid][key]["usd"] += usd
     return out
 
 
@@ -382,6 +390,8 @@ def source_opencode(cfg: dict, now: datetime, mock: bool,
 
     if found:
         windows = []
+        medido = measured or {}
+        truncado = False
         for key, label, verb, sub in (
                 ("session", "SESIÓN 5 H", "libera", "ventana móvil de 5 h"),
                 ("week", "SEMANA", "libera", "ventana semanal"),
@@ -389,19 +399,35 @@ def source_opencode(cfg: dict, now: datetime, mock: bool,
             q = found.get(key)
             if not q:
                 continue
+            pct = round(float(q.get("pct") or 0), 1)
+            tok = int((medido.get(key) or {}).get("tokens") or 0)
+            # El API de Go trunca el porcentaje con Math.floor, así que 0 %
+            # puede ser consumo real por debajo de 1 %. Los tokens medidos aquí
+            # (state.db de Hermes) se muestran al lado para que el 0 no engañe.
+            usd = float((medido.get(key) or {}).get("usd") or 0)
+            detalle = sub
+            if tok:
+                detalle = f"{sub} · {compact(tok)} tokens aquí"
+                if usd >= 0.01:
+                    detalle += f" (~${usd:.2f})"
+                if pct <= 0:
+                    detalle += " · 0 % del API = menos de 1 %"
+                    truncado = True
             windows.append({
                 "id": key, "label": label, "kind": "quota",
-                "pct": round(float(q.get("pct") or 0), 1),
+                "pct": pct,
                 "reset_at": q.get("reset_at"), "verb": verb,
-                "limit_text": "", "sub": sub,
+                "limit_text": "", "sub": detalle,
             })
         model = "Example Model" if mock else opencode_top_model(cfg)
         note = "cuota Go leída del API"
+        aviso = ("El endpoint de Go trunca a enteros (Math.floor): la ventana en "
+                 "0 % sí puede tener consumo, sólo que abajo de 1 %.") if truncado else ""
         return {
             "id": pid, "name": pcfg["name"], "plan": pcfg["plan"],
             "accent": pcfg["accent"], "source_mode": "live",
             "source_label": "EN VIVO", "source_note": note,
-            "windows": windows, "hint": "",
+            "windows": windows, "hint": aviso,
             "footer": {"model": display_model(model) if model else "",
                        "note": note},
         }
